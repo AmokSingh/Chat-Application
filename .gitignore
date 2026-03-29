@@ -2,7 +2,6 @@
 node_modules/
 package-lock.json
 yarn.lock
-package.json
 
 # Environment variables
 .env
@@ -32,3 +31,6 @@ build/
 
 # MongoDB data
 data/
+
+# Vite
+.vite/
