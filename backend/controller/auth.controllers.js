@@ -2,6 +2,7 @@ import User from "../models/user.model.js";
 import bcrypt from "bcrypt";
 import gentoken from "../config/token.js";
 
+
 export const signup = async (req, res) => {
   try {
     const { userName, email, password } = req.body;
@@ -31,8 +32,8 @@ export const signup = async (req, res) => {
     const token = await gentoken(user._id);
     res.cookie("token", token, {
       httpOnly: true,
+      sameSite: "Strict", 
       maxAge: 2 * 24 * 60 * 60 * 1000, // 2 days
-      sameSite: "none",
       secure: false, // Set to true in production with HTTPS
     });
     return res.status(201).json({ message: "User created successfully", user });
@@ -63,7 +64,7 @@ export const login = async (req, res) => {
     res.cookie("token", token, {
       httpOnly: true,
       maxAge: 2 * 24 * 60 * 60 * 1000, // 2 days
-      sameSite: "none",
+      sameSite: "Strict",
       secure: false, // Set to true in production with HTTPS
     });
     return res.status(200).json({ message: "User logged in successfully", user });
