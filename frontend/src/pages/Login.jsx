@@ -35,6 +35,7 @@ function Login() {
       setPassword("");
       setLoading(false);
       setError("");
+      
     } catch (error) {
       console.error(error);
       setLoading(false);
