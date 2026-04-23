@@ -33,6 +33,7 @@ function SignUp() {
       );
 
       dispatch(setUserData(result.data));
+      navigate("/profile");
 
       setUserName("");
       setEmail("");
