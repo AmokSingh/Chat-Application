@@ -7,7 +7,7 @@ function SenderMessage({ image, message, onImageLoad }) {
   return (
     <div className="w-full flex justify-end items-end gap-1 mb-2 px-2">
       {/* Message bubble */}
-      <div className="w-fit max-w-[70%] bg-[#6C63FF] p-1 rounded-lg flex flex-col">
+      <div className="w-fit max-w-[70%] bg-[#6C63FF] p-1 rounded-lg rounded-tr-none flex flex-col">
         {image && (
           <img
             src={image}

@@ -15,7 +15,7 @@ function ReceiverMessage({ image, message, onImageLoad }) {
         />
       </div>
 
-      <div className="w-fit max-w-[70%] bg-[#c7c7c7] p-1 rounded-lg gap-[10px] flex flex-col">
+      <div className="w-fit max-w-[70%] bg-[#c7c7c7] p-1 rounded-lg rounded-tl-none gap-[10px] flex flex-col">
         {image && (
           <img
             src={image}
