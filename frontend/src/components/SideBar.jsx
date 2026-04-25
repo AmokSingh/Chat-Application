@@ -12,12 +12,47 @@ import {
   setOtherUsers,
   setSelectedUser,
   setSearchData,
+  clearUnread,
 } from "../redux/userSlice";
 import { useNavigate } from "react-router-dom";
 
+// Helper function to format message time
+const formatMessageTime = (time) => {
+  if (!time) return null;
+
+  const messageDate = new Date(time);
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  if (messageDate.toDateString() === today.toDateString()) {
+    return messageDate.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
+
+  if (messageDate.toDateString() === yesterday.toDateString()) {
+    return "Yesterday";
+  }
+
+  const daysDiff = Math.floor((today - messageDate) / (1000 * 60 * 60 * 24));
+  if (daysDiff < 7) {
+    return messageDate.toLocaleDateString([], { weekday: "short" });
+  }
+
+  return messageDate.toLocaleDateString([], { month: "short", day: "numeric" });
+};
+
 function SideBar() {
-  let { userData, otherUsers, selectedUser, onlineUsers, searchData } =
-    useSelector((state) => state.user);
+  let {
+    userData,
+    otherUsers,
+    selectedUser,
+    onlineUsers,
+    searchData,
+    unreadMessages,
+  } = useSelector((state) => state.user);
   let [search, setSearch] = React.useState(false);
   let [input, setInput] = React.useState("");
 
@@ -57,7 +92,6 @@ function SideBar() {
           withCredentials: true,
         },
       );
-      // Filter out the current user from search results
       const filteredUsers = result.data.users.filter(
         (user) => user._id !== userData._id,
       );
@@ -81,17 +115,24 @@ function SideBar() {
     dispatch(setSearchData([]));
   };
 
-  // Filter out current user from otherUsers list (just in case)
   const filteredOtherUsers = otherUsers?.filter(
     (user) => user._id !== userData?._id,
   );
+
+  const handleUserClick = (user) => {
+    // Clear unread count when opening chat
+    if (unreadMessages[user._id] > 0) {
+      dispatch(clearUnread(user._id));
+    }
+    dispatch(setSelectedUser(user));
+  };
 
   return (
     <div
       className={`lg:w-[30%] w-full h-full bg-slate-300 box-border lg:block ${!selectedUser ? "block" : "hidden"}`}
     >
       <div
-        className="w-[6vh] h-[6vh] rounded-full bg-[#6C63FF] flex items-center justify-center overflow-hidden shadow-gray-950 shadow-lg mt-3 cursor-pointer fixed left-3 bottom-3 text-white"
+        className="w-[6vh] h-[6vh] rounded-full bg-[#6C63FF] flex items-center justify-center overflow-hidden shadow-gray-950 shadow-lg mt-3 cursor-pointer fixed left-3 bottom-3 text-white z-50"
         onClick={handleLogOut}
       >
         <RiLogoutBoxLine className="h-[20px] w-[20px]" />
@@ -126,14 +167,14 @@ function SideBar() {
               >
                 <IoMdSearch className="w-[25px] h-[25px]" />
               </div>
-              <div className="flex gap-[15px] flex-1">
+              <div className="flex gap-[15px] flex-1 overflow-x-auto">
                 {filteredOtherUsers?.map(
                   (user) =>
                     onlineUsers?.includes(user._id) && (
                       <div
                         key={user._id}
-                        className="relative cursor-pointer"
-                        onClick={() => dispatch(setSelectedUser(user))}
+                        className="relative cursor-pointer flex-shrink-0"
+                        onClick={() => handleUserClick(user)}
                       >
                         <div className="w-[6vh] h-[6vh] bg-white rounded-full flex items-center justify-center overflow-hidden shadow-gray-800 shadow-lg">
                           <img
@@ -143,6 +184,14 @@ function SideBar() {
                           />
                         </div>
                         <span className="w-[2vh] h-[2vh] rounded-full bg-[#0eff0e] absolute top-0 -right-[2px]"></span>
+                        {/* Unread badge for online users */}
+                        {unreadMessages[user._id] > 0 && (
+                          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
+                            {unreadMessages[user._id] > 9
+                              ? "9+"
+                              : unreadMessages[user._id]}
+                          </span>
+                        )}
                       </div>
                     ),
                 )}
@@ -151,14 +200,14 @@ function SideBar() {
           ) : (
             <div className="flex items-center gap-[15px]">
               <div
-                className="w-[6vh] h-[6vh] rounded-full bg-[#dfdefb] flex items-center justify-center overflow-hidden shadow-gray-950 shadow-lg cursor-pointer"
+                className="w-[6vh] h-[6vh] rounded-full bg-[#dfdefb] flex items-center justify-center overflow-hidden shadow-gray-950 shadow-lg cursor-pointer flex-shrink-0"
                 onClick={handleCloseSearch}
               >
                 <RxCross2 className="w-[25px] h-[25px]" />
               </div>
               <div className="flex-1">
                 <form className="w-full h-[6vh] bg-[#e0dffb] shadow-gray-950 shadow-lg flex items-center gap-[10px] rounded-full overflow-hidden">
-                  <IoMdSearch className="w-[30px] h-[30px] ml-[6px]" />
+                  <IoMdSearch className="w-[30px] h-[30px] ml-[6px] flex-shrink-0" />
                   <input
                     type="text"
                     placeholder="Search User... "
@@ -174,7 +223,7 @@ function SideBar() {
         </div>
       </div>
 
-      {/* User List - Shows search results when searching, otherwise shows otherUsers */}
+      {/* User List */}
       <div className="w-full h-[46vh] mt-[4vh] overflow-auto flex flex-col">
         {search ? (
           // Search Results
@@ -182,9 +231,9 @@ function SideBar() {
             searchData.map((user) => (
               <div
                 key={user._id}
-                className="w-[100%] h-[10vh] px-5 py-8 flex items-center justify-start gap-[15px] shadow-gray-400 shadow-sm cursor-pointer hover:bg-[#6C63FF] transition duration-300"
+                className="w-[100%] h-[10vh] px-5 py-8 flex items-center justify-start gap-[15px] shadow-gray-400 shadow-sm cursor-pointer hover:bg-[#6C63FF] transition duration-300 group"
                 onClick={() => {
-                  dispatch(setSelectedUser(user));
+                  handleUserClick(user);
                   handleCloseSearch();
                 }}
               >
@@ -201,11 +250,13 @@ function SideBar() {
                   )}
                 </div>
                 <div>
-                  <h1 className="text-gray-900 font-semibold text-[16px]">
+                  <h1 className="text-gray-900 font-semibold text-[16px] group-hover:text-white transition duration-300">
                     {user.name || user.userName}
                   </h1>
                   {user.bio && (
-                    <p className="text-gray-500 text-[12px] mt-1">{user.bio}</p>
+                    <p className="text-gray-500 text-[12px] mt-1 group-hover:text-gray-200 transition duration-300">
+                      {user.bio}
+                    </p>
                   )}
                 </div>
               </div>
@@ -222,37 +273,76 @@ function SideBar() {
             </div>
           )
         ) : (
-          // Regular Users List
-          filteredOtherUsers?.map((user) => (
-            <div
-              key={user._id}
-              className="w-[100%] h-[10vh] px-5 py-8 flex items-center justify-start gap-[15px] shadow-gray-400 shadow-sm cursor-pointer hover:bg-[#6C63FF] transition duration-300 group"
-              onClick={() => dispatch(setSelectedUser(user))}
-            >
-              <div className="relative">
-                <div className="w-[6vh] h-[6vh] mt-3 bg-white rounded-full flex items-center justify-center overflow-hidden shadow-gray-800 shadow-lg">
-                  <img
-                    src={user.image || dp}
-                    alt="Profile"
-                    className="h-[100%]"
-                  />
+          // Regular Users List with online/offline status and unread messages
+          filteredOtherUsers?.map((user) => {
+            const lastMessageTime = formatMessageTime(user.lastMessage?.time);
+            const hasUnread = unreadMessages[user._id] > 0;
+            const unreadCount = unreadMessages[user._id] || 0;
+            const isOnline = onlineUsers?.includes(user._id);
+
+            return (
+              <div
+                key={user._id}
+                className={`w-[100%] h-[10vh] px-5 py-8 flex items-center justify-start gap-[15px] shadow-gray-400 shadow-sm cursor-pointer hover:bg-[#6C63FF] transition duration-300 group ${ 
+                  hasUnread ? "bg-[#e2e2e2]" : ""
+                }`}
+                onClick={() => handleUserClick(user)}
+              >
+                <div className="relative">
+                  <div className="w-[6vh] h-[6vh] mt-3 bg-white rounded-full flex items-center justify-center overflow-hidden shadow-gray-800 shadow-lg">
+                    <img
+                      src={user.image || dp}
+                      alt="Profile"
+                      className="h-[100%]"
+                    />
+                  </div>
+                  
+                  {/* Unread badge */}
+                  {hasUnread && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 z-10">
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </span>
+                  )}
                 </div>
-                {onlineUsers?.includes(user._id) && (
-                  <span className="w-[2vh] h-[2vh] rounded-full bg-[#0eff0e] absolute top-3 -right-[2px]"></span>
-                )}
-              </div>
-              <div>
-                <h1 className="text-gray-900 font-semibold text-[16px]">
-                  {user.name || user.userName}
-                </h1>
-                {onlineUsers?.includes(user._id) && (
-                  <p className="text-green-600 text-[12px] mt-1 group-hover:text-green-300 transition duration-300">
-                    Online
+                <div className="flex-1">
+                  <div className="flex justify-between items-center">
+                    <h1
+                      className={`text-gray-900 text-[16px] transition duration-300 ${
+                        hasUnread
+                          ? "font-bold group-hover:text-white"
+                          : "font-semibold group-hover:text-white"
+                      }`}
+                    >
+                      {user.name || user.userName}
+                    </h1>
+                    {lastMessageTime && (
+                      <span
+                        className={`text-[10px] transition duration-300 ${
+                          hasUnread
+                            ? "text-gray-900 font-bold group-hover:text-white"
+                            : "text-gray-500 group-hover:text-white"
+                        }`}
+                      >
+                        {lastMessageTime}
+                      </span>
+                    )}
+                  </div>
+                  {/* Show online/offline status instead of message preview */}
+                  <p
+                    className={`text-[12px] mt-1 transition duration-300 ${
+                      hasUnread
+                        ? "text-gray-900 font-bold group-hover:text-gray-200"
+                        : isOnline
+                          ? "text-green-600 group-hover:text-green-300"
+                          : "text-gray-500 group-hover:text-gray-200"
+                    }`}
+                  >
+                    {isOnline ? "🟢 Online" : "⚫ Offline"}
                   </p>
-                )}
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>

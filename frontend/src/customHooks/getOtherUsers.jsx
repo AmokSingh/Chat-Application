@@ -13,6 +13,7 @@ const getOtherUsers = () => {
         let result = await axios.get(`${serverUrl}/api/user/others`, {
           withCredentials: true,
         });
+        // The backend should already sort them, but just in case
         dispatch(setOtherUsers(result.data.users));
       } catch (error) {
         console.log("Error fetching other users:", error);
