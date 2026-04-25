@@ -16,30 +16,11 @@ function Profile() {
   let [name, setName] = React.useState("");
   let [frontendImage, setFrontendImage] = React.useState(profile);
   let [backendImage, setBackendImage] = React.useState(null);
-  let [loading, setLoading] = React.useState(true); // Add loading state
 
   let image = React.useRef();
   let [saving, setSaving] = React.useState(false);
 
-  // Fetch fresh user data when component mounts
-  React.useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const userResult = await axios.get(`${serverUrl}/api/user/current`, {
-          withCredentials: true,
-        });
-        dispatch(setUserData(userResult.data.user));
-      } catch (error) {
-        console.error("Error fetching user data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUserData();
-  }, [dispatch]); // Run once when component mounts
-
-  // Update local state when userData changes
+  // Update local state when userData loads/changes
   React.useEffect(() => {
     if (userData) {
       setName(userData.name || "");
@@ -71,28 +52,19 @@ function Profile() {
         withCredentials: true,
       });
 
-      // Fetch fresh user data after update
+      // ✅ Fetch fresh user data after update
       const userResult = await axios.get(`${serverUrl}/api/user/current`, {
         withCredentials: true,
       });
 
       dispatch(setUserData(userResult.data.user));
       setSaving(false);
-      navigate("/");
+      navigate("/"); // Redirect to home
     } catch (error) {
       console.error("Error updating profile:", error);
       setSaving(false);
     }
   };
-
-  // Show loading spinner while fetching data
-  if (loading) {
-    return (
-      <div className="w-full h-[100vh] bg-slate-200 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#6C63FF]"></div>
-      </div>
-    );
-  }
 
   return (
     <div className="w-full h-[100vh] bg-slate-200 flex items-center justify-center flex-col gap-[5vh] relative">
@@ -105,7 +77,7 @@ function Profile() {
         </div>
       </nav>
       <div
-        className="w-[150px] h-[150px] min-h-[150px] min-w-[150px] bg-white rounded-full border-4 border-[#6C63FF] shadow-gray-400 shadow-lg overflow-hidden relative cursor-pointer"
+        className="w-[150px] h-[150px] min-h-[150px] min-w-[150px] bg-white rounded-full border-4 border-[#6C63FF] shadow-gray-400 shadow-lg overflow-hidden relative"
         onClick={() => image.current.click()}
       >
         <div className="w-[100%] h-[100%] flex items-center justify-center">
@@ -142,7 +114,6 @@ function Profile() {
           readOnly
           className="w-[85%] h-[7vh] outline-none border-2 border-[#6C63FF] px-[10px] py-[15px] rounded-lg bg-white shadow-gray-400 shadow-lg text-gray-500"
           value={userData?.userName || ""}
-          placeholder="Username"
         />
 
         <input
@@ -150,7 +121,6 @@ function Profile() {
           readOnly
           className="w-[85%] h-[7vh] outline-none border-2 border-[#6C63FF] px-[10px] py-[15px] rounded-lg bg-white shadow-gray-400 shadow-lg text-gray-500"
           value={userData?.email || ""}
-          placeholder="Email"
         />
 
         <button
