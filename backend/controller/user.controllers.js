@@ -37,11 +37,12 @@ export const editProfile = async (req, res) => {
 };
 
 // find other users sorted by latest message
+// find other users - Show ALL users except current user
 export const getOtherUsers = async (req, res) => {
   try {
     const currentUserId = req.userId;
 
-    // Get all users except current user
+    // Get all users except current user (NO filtering by chat history)
     let users = await User.find({ _id: { $ne: currentUserId } }).select(
       "-password",
     );
@@ -57,7 +58,6 @@ export const getOtherUsers = async (req, res) => {
     // Create maps for last message info for each user
     const userLastMessageMap = new Map();
     const userLastMessageTimeMap = new Map();
-    const userLastMessagePreviewMap = new Map();
 
     conversations.forEach((conversation) => {
       // Find the other participant in the conversation
@@ -77,7 +77,7 @@ export const getOtherUsers = async (req, res) => {
           lastMessageTime,
         );
 
-        // Store last message preview (for potential future use)
+        // Store last message preview
         let messagePreview = "";
         if (latestMessage.message) {
           messagePreview =
@@ -87,10 +87,6 @@ export const getOtherUsers = async (req, res) => {
         } else if (latestMessage.image) {
           messagePreview = "📷 Image";
         }
-        userLastMessagePreviewMap.set(
-          otherParticipant.toString(),
-          messagePreview,
-        );
 
         // Store full last message info
         userLastMessageMap.set(otherParticipant.toString(), {
@@ -102,12 +98,12 @@ export const getOtherUsers = async (req, res) => {
       }
     });
 
-    // Sort users by latest message time (users with conversations first, then by time)
+    // Sort users: Users with conversations first (by latest message), then alphabetically
     const sortedUsers = users.sort((a, b) => {
       const timeA = userLastMessageTimeMap.get(a._id.toString());
       const timeB = userLastMessageTimeMap.get(b._id.toString());
 
-      // If both have conversations, sort by latest message time
+      // If both have conversations, sort by latest message time (newest first)
       if (timeA && timeB) {
         return new Date(timeB) - new Date(timeA);
       }
@@ -116,7 +112,7 @@ export const getOtherUsers = async (req, res) => {
       // If only B has a conversation, B comes first
       if (!timeA && timeB) return 1;
       // If neither has conversations, sort by name
-      return a.name.localeCompare(b.name);
+      return a.name?.localeCompare(b.name) || 0;
     });
 
     // Add last message info to each user object
@@ -131,6 +127,7 @@ export const getOtherUsers = async (req, res) => {
 
     return res.status(200).json({ users: usersWithLastMessage });
   } catch (error) {
+    console.error("Get other users error:", error);
     return res
       .status(500)
       .json({ message: `Get other users error ${error.message}` });
