@@ -32,9 +32,9 @@ export const signup = async (req, res) => {
     const token = await gentoken(user._id);
     res.cookie("token", token, {
       httpOnly: true,
-      sameSite: "Strict", 
+      sameSite: "None", 
       maxAge: 2 * 24 * 60 * 60 * 1000, // 2 days
-      secure: false, // Set to true in production with HTTPS
+      secure: true, // Set to true in production with HTTPS
     });
     return res.status(201).json({ message: "User created successfully", user });
   } catch (error) {
@@ -64,8 +64,8 @@ export const login = async (req, res) => {
     res.cookie("token", token, {
       httpOnly: true,
       maxAge: 2 * 24 * 60 * 60 * 1000, // 2 days
-      sameSite: "Strict",
-      secure: false, // Set to true in production with HTTPS
+      sameSite: "None",
+      secure: true, // Set to true in production with HTTPS
     });
     return res.status(200).json({ message: "User logged in successfully", user });
   } catch (error) {
