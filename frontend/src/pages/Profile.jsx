@@ -16,17 +16,38 @@ function Profile() {
   let [name, setName] = React.useState("");
   let [frontendImage, setFrontendImage] = React.useState(profile);
   let [backendImage, setBackendImage] = React.useState(null);
+  let [loading, setLoading] = React.useState(true); // Add loading state
 
   let image = React.useRef();
   let [saving, setSaving] = React.useState(false);
 
-  // Update local state when userData loads/changes
+  // Fetch fresh user data when component mounts
   React.useEffect(() => {
-    if (userData) {
+    const fetchUserData = async () => {
+      try {
+        const result = await axios.get(`${serverUrl}/api/user/current`, {
+          withCredentials: true,
+        });
+        dispatch(setUserData(result.data.user));
+        setName(result.data.user.name || "");
+        setFrontendImage(result.data.user.image || profile);
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, [dispatch]);
+
+  // Update local state when userData changes (for updates after save)
+  React.useEffect(() => {
+    if (userData && !loading) {
       setName(userData.name || "");
       setFrontendImage(userData.image || profile);
     }
-  }, [userData]);
+  }, [userData, loading]);
 
   const handleImage = (e) => {
     let file = e.target.files[0];
@@ -47,24 +68,32 @@ function Profile() {
         formData.append("image", backendImage);
       }
 
-      // Update profile
       await axios.put(`${serverUrl}/api/user/profile`, formData, {
         withCredentials: true,
       });
 
-      // ✅ Fetch fresh user data after update
+      // Fetch fresh user data after update
       const userResult = await axios.get(`${serverUrl}/api/user/current`, {
         withCredentials: true,
       });
 
       dispatch(setUserData(userResult.data.user));
       setSaving(false);
-      navigate("/"); // Redirect to home
+      navigate("/");
     } catch (error) {
       console.error("Error updating profile:", error);
       setSaving(false);
     }
   };
+
+  // Show loading while fetching data
+  if (loading) {
+    return (
+      <div className="w-full h-[100vh] bg-slate-200 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#6C63FF]"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full h-[100vh] bg-slate-200 flex items-center justify-center flex-col gap-[5vh] relative">
